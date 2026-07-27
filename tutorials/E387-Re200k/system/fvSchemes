@@ -1,0 +1,65 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format          ascii;
+    class           dictionary;
+    location        "system";
+    object          fvSchemes;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+ddtSchemes
+{
+    default         steadyState;
+}
+
+// Single-phase, second-order upwind-biased. Validated to cold-start (uniform
+// init) and converge across the full Tu sweep on this mesh, given the
+// nutRatio(Tu) freestream in 0/include/caseSettings. If a finer mesh needs more
+// gradient robustness, switch the grad below to  cellLimited Gauss linear 1.
+gradSchemes
+{
+    default         Gauss linear;
+}
+
+divSchemes
+{
+    default         none;
+    div(phi,U)      bounded Gauss linearUpwind grad(U);
+    div(phi,k)      bounded Gauss linearUpwind grad(U);
+    div(phi,omega)  bounded Gauss linearUpwind grad(U);
+    // Intermittency: same convention as k/omega above.  gammaInt is a
+    // bounded [0,1] scalar, so a limited/upwind-biased scheme is required;
+    // this matches OpenFOAM's own T3A tutorial.
+    div(phi,gammaInt) bounded Gauss linearUpwind grad(U);
+    div((nuEff*dev2(T(grad(U))))) Gauss linear;
+}
+
+laplacianSchemes
+{
+    default         Gauss linear corrected;
+}
+
+interpolationSchemes
+{
+    default         linear;
+}
+
+snGradSchemes
+{
+    default         corrected;
+}
+
+wallDist
+{
+    method          meshWave;
+}
+
+
+// ************************************************************************* //

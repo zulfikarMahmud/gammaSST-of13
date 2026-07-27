@@ -1,0 +1,51 @@
+#!/bin/bash
+cd "${0%/*}" || exit 1        # run from this case directory
+set -o pipefail
+
+# =============================================================================
+#  E387, Re = 200 000, alpha = 0 deg, Tu = 0.1 %  --  gammaSST validation
+#
+#  Single phase: 0 -> END iterations, writing a surface sample every
+#  writeInterval.  The mean surface pressure is then formed IN POST by
+#  validate_cp.py, which averages those snapshots.
+#
+#  Why average at all: the laminar separation bubble is physically unsteady, so
+#  a steady SIMPLE run limit-cycles rather than converging (Cl swings ~16 %
+#  peak-to-peak here).  A single snapshot is not the answer; the mean over the
+#  cycle is.  Averaging in post -- rather than with a runtime fieldAverage --
+#  keeps the run to one phase and lets the averaging window be chosen (and
+#  changed) after the fact.
+#
+#  Numerics note: pressure uses GAMG with the *DIC* smoother.  The GaussSeidel
+#  family (GaussSeidel / symGaussSeidel / DICGaussSeidel) SIGFPEs on the first
+#  iteration of a cold start on this mesh, inside GAMGSolver::scale().
+# =============================================================================
+
+NP=8                          # must match numberOfSubdomains in decomposeParDict
+END=5000
+AVG_START=2000                # post-hoc averaging window: [AVG_START, END]
+
+die () { echo; echo "## STOPPED: $1"; exit 1; }
+
+caseName="${PWD##*/}"
+touch "${caseName}.foam"      # ParaView marker
+
+checkMesh 2>&1 | tee log.checkMesh
+grep -q "Mesh OK" log.checkMesh || die "checkMesh reported mesh problems."
+decomposePar 2>&1 | tee log.decomposePar
+[ "${PIPESTATUS[0]}" -eq 0 ] || die "decomposePar failed (run ./Allclean first)."
+
+foamDictionary system/controlDict -entry endTime -set "$END" >/dev/null
+echo ">>> Solving 0 -> $END"
+mpirun -np "$NP" foamRun -parallel 2>&1 | tee log.foamRun
+[ "${PIPESTATUS[0]}" -eq 0 ] || die "foamRun failed. See log.foamRun."
+
+reconstructPar 2>&1 | tee log.reconstructPar
+[ "${PIPESTATUS[0]}" -eq 0 ] || die "reconstructPar failed."
+
+# --- mean Cp vs the McGhee experiment (averaging done here, in post) ---------
+Uinf=$(foamDictionary 0/include/caseSettings -entry Uinf 2>/dev/null | awk '{print $2}' | tr -d ';')
+python3 validate_cp.py . "${Uinf:-3}" "$AVG_START" 2>&1 | tee log.validate_cp
+
+echo
+echo "Done.  Mean-Cp comparison: cp_validation.png ; metrics: log.validate_cp"

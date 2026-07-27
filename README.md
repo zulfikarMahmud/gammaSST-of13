@@ -21,7 +21,7 @@ implementation — the regime is selected automatically by whichever solver you 
 - [4. Requirements](#4-requirements)
 - [5. Install](#5-install)
 - [6. Using it in your own case](#6-using-it-in-your-own-case)
-- [7. Validation: ERCOFTAC T3A](#7-validation-ercoftac-t3a)
+- [7. Validation](#7-validation)
 - [8. Model coefficients](#8-model-coefficients)
 - [9. Repository layout](#9-repository-layout)
 - [10. How this was built — implementation guide](#10-how-this-was-built--implementation-guide)
@@ -228,7 +228,9 @@ for why this works.
 
 ---
 
-## 7. Validation: ERCOFTAC T3A
+## 7. Validation
+
+### 7.1 ERCOFTAC T3A — flat-plate bypass transition
 
 The classic flat-plate bypass-transition benchmark (`Tu = 3.3 %` at inlet,
 `U∞ = 5.4 m/s`, `ν = 1.5e-5 m²/s`, zero pressure gradient).
@@ -269,7 +271,7 @@ For numbers instead of a picture:
 cd tutorials/T3A/validation && python3 compare.py
 ```
 
-### Cross-validation against the reference implementation
+#### Cross-validation against the reference implementation
 
 Independently checked against **[furstj/gammaSST](https://github.com/furstj/gammaSST)**
 (Jiří Fürst's ESI-line implementation, the de-facto reference), on both code and
@@ -334,6 +336,36 @@ establish that this port reproduces the reference model.
 > paper as published, so that term is absent by design.
 
 See [`tutorials/T3A/README.md`](tutorials/T3A/README.md) for full discussion.
+
+---
+
+### 7.2 Eppler 387, Re = 200 000 — laminar separation bubble
+
+The case the model is actually for: separation-induced transition at **low**
+freestream turbulence (`Tu = 0.1 %`), validated against McGhee, Walker & Millard,
+NASA TM-4062.
+
+```bash
+cd tutorials/E387-Re200k && ./Allrun
+```
+
+![E387 mean Cp](tutorials/E387-Re200k/validation/cp_validation.png)
+
+| region | mean \|ΔCp\| |
+|---|---|
+| **overall** | **0.0198** |
+| upper (suction) | 0.0240 |
+| lower (pressure) | 0.0156 |
+
+Suction peak CFD −0.581 @ `x/c` 0.322 vs experiment −0.601 @ `x/c` 0.350; the
+bubble plateau and reattachment recovery are both captured.
+
+This run **does not converge to steady state, and should not** — the bubble is
+physically unsteady and the solver limit-cycles (`Cl` swings ~16 % peak-to-peak).
+The comparison therefore uses the **mean over the limit cycle**, formed in post
+from the written surface samples, with a ±2 SEM band drawn so the sampling
+uncertainty is visible rather than hidden. See
+[`tutorials/E387-Re200k/README.md`](tutorials/E387-Re200k/README.md).
 
 ---
 
@@ -404,7 +436,7 @@ gammaSST-of13/
 │   ├── gammaSSTIncompressibleMomentumTransportModels.C   # registration
 │   └── gammaSSTCompressibleMomentumTransportModels.C     # registration
 └── tutorials/
-    └── T3A/                     # ERCOFTAC T3A validation case
+    ├── T3A/                     # ERCOFTAC T3A -- flat-plate bypass transition
         ├── 0/ constant/ system/ # case setup
         ├── Allrun / Allclean
         └── validation/
@@ -413,9 +445,16 @@ gammaSST-of13/
             ├── plot_compare.py  # four-way: ours / furstj / built-in / experiment
             ├── createGraphs     # gnuplot equivalent (OpenFOAM-idiomatic)
             ├── exptData/        # Savill / ERCOFTAC T3A data
-            └── reference/
-                ├── digitise_furstj.py   # recover his published curve + calibrate
-                └── furstj_T3A_cf.csv    # the recovered numbers
+    │       └── reference/
+    │           ├── digitise_furstj.py   # recover his published curve + calibrate
+    │           └── furstj_T3A_cf.csv    # the recovered numbers
+    └── E387-Re200k/             # Eppler 387 -- laminar separation bubble
+        ├── 0/ constant/ system/ # case setup (mesh supplied, gzipped)
+        ├── Allrun / Allclean
+        ├── validate_cp.py       # forms pMean in post, compares vs McGhee
+        └── validation/
+            ├── exptData/        # McGhee NASA TM-4062 Cp
+            └── cp_validation.png
 ```
 
 ---

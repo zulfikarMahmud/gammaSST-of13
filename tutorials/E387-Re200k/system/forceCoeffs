@@ -1,0 +1,12 @@
+type            forceCoeffs;
+libs            ("libforces.so");
+patches         (airfoil);
+rho             rhoInf;
+rhoInf          1;
+magUInf         3;          // Re=200k, U=3
+lRef            1;
+Aref            1;
+liftDir         (0 1 0);
+dragDir         (1 0 0);
+CofR            (0.25 0 0);
+pitchAxis       (0 0 1);
