@@ -97,21 +97,36 @@ reference ESI-line implementation, on both code and results.
 
 All 15 coefficient defaults are identical, and `ReThetac`, `Fonset`, `Fturb`,
 `TuL`, `FPG` and the γ-equation implicit/explicit split are term-for-term
-equivalent. His T3A runs at `U∞ = 5.18 m/s` against this case's `5.4 m/s`, with
-identical `Tu = 3.3 %` and `ν_t/ν = 12.0`:
+equivalent.
 
-| Feature | This repo (OF13) | furstj (published figure) | Experiment |
-|---|---|---|---|
-| `c_f` minimum | 0.00228 @ `Re_x` 1.42e5 | ≈0.00215 @ ≈1.5e5 | 0.00210 @ 1.41e5 |
-| turbulent peak `c_f` | 0.00465 @ 2.7e5 | ≈0.0046 @ ≈3.0e5 | ≈0.0049 @ 3.0e5 |
-| `c_f` at `Re_x` = 5e5 | 0.00423 | ≈0.0042 | 0.0042 |
+His repo publishes figures only, so his curve was recovered with
+[`validation/reference/digitise_furstj.py`](validation/reference/digitise_furstj.py)
+— self-calibrated on the 16 experimental markers his figure also plots
+(mean 0.44 px). Both models were then re-run at his exact `U∞ = 5.18 m/s`;
+the coarse mesh is identical vertex-for-vertex between the repos.
 
-Laminar level, onset, transition length, turbulent peak and downstream recovery
-all agree; the residual offset is consistent with the 4 % difference in `U∞`.
+![four-way](validation/T3A_fourway.png)
+
+Transition onset on his medium mesh (107 280 cells), all at `U∞ = 5.18 m/s`:
+
+| | onset `Re_x` | vs furstj |
+|---|---|---|
+| **this repo** | 1.467e5 | −3.2 % |
+| furstj | 1.515e5 | — |
+| built-in `kOmegaSSTLM` | 1.153e5 | −23.9 % |
+| experiment | 1.355e5 | — |
+
+Fully-turbulent `c_f` agrees to **0.2 %**; pointwise across the curve, 5 %.
+
+Onset is grid-sensitive and moves toward his value with refinement
+(coarse 1.363e5 → medium 1.467e5, still climbing), and his README does not say
+which mesh made the figure — so this is agreement within grid sensitivity, not a
+converged match. **Never quote an onset number from this model without stating
+the mesh.**
 
 His implementation additionally carries a **crossflow** extension (`FonsetCF`,
-`CRSF`) from later work, which is deliberately absent here — this repo implements
-the 2015 paper as published.
+`CRSF`) from later work, deliberately absent here — this repo implements the
+2015 paper as published.
 
 ## Difference from OpenFOAM's own T3A tutorial
 

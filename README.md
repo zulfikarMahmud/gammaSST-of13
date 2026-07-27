@@ -24,7 +24,7 @@ implementation — the regime is selected automatically by whichever solver you 
 - [7. Validation: ERCOFTAC T3A](#7-validation-ercoftac-t3a)
 - [8. Model coefficients](#8-model-coefficients)
 - [9. Repository layout](#9-repository-layout)
-- [10. How this was built — implementation tutorial](#10-how-this-was-built--implementation-tutorial)
+- [10. How this was built — implementation guide](#10-how-this-was-built--implementation-guide)
 - [11. Troubleshooting](#11-troubleshooting)
 - [12. References](#12-references)
 - [13. License](#13-license)
@@ -136,7 +136,7 @@ F_1 \rightarrow \max(F_1^{SST},F_3),\quad F_3=e^{-(R_y/120)^8}$$
 - `gnuplot` (optional — only for the validation plots)
 
 > **Not compatible with** openfoam.com (ESI) `vXXXX` releases, or Foundation
-> versions ≤ 12, without changes. See [§10](#10-how-this-was-built--implementation-tutorial)
+> versions ≤ 12, without changes. See [the implementation guide](doc/IMPLEMENTATION-GUIDE.md#porting-to-other-openfoam-versions)
 > for what would have to change.
 
 ---
@@ -223,7 +223,7 @@ You need `0/k`, `0/omega`, `0/nut` exactly as for `kOmegaSST`. You do **not** ne
 The same library serves both. Run an incompressible solver
 (`foamRun -solver incompressibleFluid`) and the incompressible instantiation is
 constructed; run a compressible one (`foamRun -solver fluid`) and the compressible
-one is. **You do not set a flag.** See [§10.6](#106-stage-5--registration-for-both-regimes)
+one is. **You do not set a flag.** See [the implementation guide](doc/IMPLEMENTATION-GUIDE.md#step-7--register-for-both-regimes)
 for why this works.
 
 ---
@@ -283,17 +283,51 @@ results.
 `λ_θL` expression and its sign branch) are term-for-term equivalent, as is the
 γ-equation implicit/explicit split.
 
-**Results** — his T3A runs at `U∞ = 5.18 m/s` vs this case's `5.4 m/s`, with
-identical `Tu = 3.3 %` and `ν_t/ν = 12.0`:
+**Results** — his repository publishes figures only, so his `c_f` curve was
+recovered with [`digitise_furstj.py`](tutorials/T3A/validation/reference/digitise_furstj.py).
+The extraction is self-calibrating: his figure also plots the experimental points,
+and his `exptData/T3A.dat` is byte-identical to OpenFOAM 13's, so the script
+predicts where all 16 markers must land and checks them — **mean 0.44 px, max
+0.82 px** (1 px = 761 in `Re_x`, 1.4e-05 in `c_f`).
 
-| Feature | This repo (OF13) | furstj (published figure) | Experiment |
+To eliminate `U∞` as a variable, this model **and** the built-in `kOmegaSSTLM`
+were re-run at his exact `U∞ = 5.18 m/s`. The coarse mesh was verified
+**identical vertex-for-vertex** between the two repositories.
+
+![four-way comparison](tutorials/T3A/validation/T3A_fourway.png)
+
+Transition onset, all at `U∞ = 5.18 m/s` on his **medium** mesh (107 280 cells):
+
+| | onset `Re_x` | vs furstj |
+|---|---|---|
+| **this repo, gammaSST** | 1.467e5 | −3.2 % |
+| furstj, gammaSST | 1.515e5 | — |
+| built-in `kOmegaSSTLM` | 1.153e5 | −23.9 % |
+| experiment | 1.355e5 | — |
+
+In the fully-turbulent region the two γ implementations agree to **0.2 %**
+(`c_f` at `Re_x` = 5e5: 0.00424 vs 0.00423), and pointwise across the whole
+curve to 5 %.
+
+**On the remaining onset difference — and a caveat that matters.** Onset is
+strongly grid-sensitive for this model: refining moves it monotonically toward
+his value.
+
+| mesh | cells | onset `Re_x` | vs furstj |
 |---|---|---|---|
-| `c_f` minimum | 0.00228 @ `Re_x` 1.42e5 | ≈0.00215 @ ≈1.5e5 | 0.00210 @ 1.41e5 |
-| turbulent peak `c_f` | 0.00465 @ 2.7e5 | ≈0.0046 @ ≈3.0e5 | ≈0.0049 @ 3.0e5 |
-| `c_f` at `Re_x` = 5e5 | 0.00423 | ≈0.0042 | 0.0042 |
+| coarse | 26 820 | 1.363e5 | −10.1 % |
+| medium | 107 280 | 1.467e5 | −3.2 % |
 
-Laminar level, onset, transition length, turbulent peak and downstream decay all
-agree. The residual offset is consistent with the 4 % difference in `U∞`.
+His README does not state which mesh produced the published figure. The gap
+closes from 10 % to 3 % with one refinement and was **still moving**, so treat
+this as agreement within grid sensitivity rather than a converged match — and
+quote no onset number from this model without saying which mesh it came from.
+The coarse mesh happening to sit nearest the experiment (1.363e5 vs 1.355e5) is
+most likely favourable cancellation, not accuracy.
+
+The claims that do **not** depend on mesh — identical coefficients, term-for-term
+identical formulation, 0.2 % agreement in the turbulent region — are what
+establish that this port reproduces the reference model.
 
 > **One deliberate difference:** furstj's version also carries a **crossflow**
 > extension (`FonsetCF`, `CRSF`) from later work. This repo implements the 2015
@@ -355,257 +389,57 @@ accepted here and keep their standard SST defaults.
 
 ```
 gammaSST-of13/
-├── Allwmake                 # build  -> $FOAM_USER_LIBBIN/libgammaSST.so
-├── Allwclean                # clean
-├── LICENSE                  # GPL-3.0 (same as OpenFOAM)
+├── Allwmake                     # build -> $FOAM_USER_LIBBIN/libgammaSST.so
+├── Allwclean                    # clean
+├── LICENSE                      # GPL-3.0 (same as OpenFOAM)
 ├── README.md
-└── gammaSST/
-    ├── Make/
-    │   ├── files            # sources to compile + output library name
-    │   └── options          # include paths + link libraries
-    ├── gammaSST.H           # class declaration
-    ├── gammaSST.C           # model implementation
-    ├── gammaSSTIncompressibleMomentumTransportModels.C   # registration
-    └── gammaSSTCompressibleMomentumTransportModels.C     # registration
+├── doc/
+│   └── IMPLEMENTATION-GUIDE.md  # step-by-step: build this yourself from nothing
+├── gammaSST/
+│   ├── Make/
+│   │   ├── files                # sources to compile + output library name
+│   │   └── options              # include paths + link libraries
+│   ├── gammaSST.H               # class declaration
+│   ├── gammaSST.C               # model implementation
+│   ├── gammaSSTIncompressibleMomentumTransportModels.C   # registration
+│   └── gammaSSTCompressibleMomentumTransportModels.C     # registration
 └── tutorials/
-    └── T3A/                 # ERCOFTAC T3A validation case
+    └── T3A/                     # ERCOFTAC T3A validation case
+        ├── 0/ constant/ system/ # case setup
+        ├── Allrun / Allclean
+        └── validation/
+            ├── compare.py       # quantitative metrics vs experiment
+            ├── plot.py          # c_f + Tu decay figure
+            ├── plot_compare.py  # four-way: ours / furstj / built-in / experiment
+            ├── createGraphs     # gnuplot equivalent (OpenFOAM-idiomatic)
+            ├── exptData/        # Savill / ERCOFTAC T3A data
+            └── reference/
+                ├── digitise_furstj.py   # recover his published curve + calibrate
+                └── furstj_T3A_cf.csv    # the recovered numbers
 ```
 
 ---
 
-## 10. How this was built — implementation tutorial
+## 10. How this was built — implementation guide
 
-This section documents the **process**, so you can implement any other turbulence
-model in OpenFOAM 13 the same way. Read it alongside the source.
+**→ [`doc/IMPLEMENTATION-GUIDE.md`](doc/IMPLEMENTATION-GUIDE.md)** is a complete,
+from-nothing walkthrough: architecture, build files, header, implementation,
+dual-regime registration, case setup, validation, and a debugging checklist.
 
-### 10.1 The golden rule: inherit, don't copy
+The short version — the decisions that matter:
 
-The single most important decision. `gammaSST` is k-ω SST **plus** one equation
-and a few modified terms. OpenFOAM 13 already factors SST so that exactly those
-terms are `virtual` hooks. So we **inherit from the SST base class and override
-the hooks** — we never copy the SST source.
-
-Find the hooks:
-
-```bash
-grep -n "virtual" $FOAM_SRC/MomentumTransportModels/momentumTransportModels/Base/kOmegaSST/kOmegaSSTBase.H
-```
-
-The ones that matter:
-
-| Hook | Default in SST | What gammaSST does |
-|---|---|---|
-| `Pk(G)` | returns `G` | multiply by `γ`, add `Pk_lim` |
-| `epsilonByk(F1,F2)` | `betaStar*omega` | multiply by `min(max(γ,0.1),1)` |
-| `F1(CDkOmega)` | SST blending | blend with `F3` |
-| `correctNut()` | — | unchanged |
-| `correct()` | solves k, ω | call base, then solve γ |
-
-**This is why the implementation is ~400 lines instead of ~1500,** and why it
-automatically inherits every future upstream SST bug fix.
-
-### 10.2 Stage 1 — the skeleton
-
-OpenFOAM finds out-of-tree code through two files. Create:
-
-```
-gammaSST/Make/files
-gammaSST/Make/options
-```
-
-`Make/files` lists what to compile and — critically — **where the library goes**:
-
-```make
-gammaSSTIncompressibleMomentumTransportModels.C
-gammaSSTCompressibleMomentumTransportModels.C
-
-LIB = $(FOAM_USER_LIBBIN)/libgammaSST
-```
-
-`$(FOAM_USER_LIBBIN)` is what keeps this out of the OpenFOAM installation.
-Using `$(FOAM_LIBBIN)` instead would write into the system tree — don't.
-
-Note that `gammaSST.C` is **not** listed. It is a template and gets `#include`d by
-the two registration units; compiling it standalone would produce no symbols.
-
-### 10.3 Stage 2 — `Make/options`
-
-Include paths and link libraries. Derive them from the framework you're
-extending rather than guessing:
-
-```bash
-cat $FOAM_SRC/MomentumTransportModels/incompressible/Make/options
-cat $FOAM_SRC/MomentumTransportModels/compressible/Make/options
-```
-
-Union of the two, plus the shared base:
-
-```make
-EXE_INC = \
-    -I$(LIB_SRC)/MomentumTransportModels/momentumTransportModels/lnInclude \
-    -I$(LIB_SRC)/MomentumTransportModels/incompressible/lnInclude \
-    -I$(LIB_SRC)/MomentumTransportModels/compressible/lnInclude \
-    -I$(LIB_SRC)/physicalProperties/lnInclude \
-    -I$(LIB_SRC)/finiteVolume/lnInclude \
-    -I$(LIB_SRC)/meshTools/lnInclude
-
-LIB_LIBS = \
-    -lmomentumTransportModels \
-    -lincompressibleMomentumTransportModels \
-    -lcompressibleMomentumTransportModels \
-    -lphysicalProperties \
-    -lfiniteVolume \
-    -lmeshTools
-```
-
-`-lphysicalProperties` is required by the compressible side specifically; omitting
-it gives undefined-symbol errors only at link time.
-
-### 10.4 Stage 3 — the header
-
-Model the declaration on the class you inherit from:
-
-```bash
-cp -n $FOAM_SRC/MomentumTransportModels/momentumTransportModels/RAS/kOmegaSSTLM/kOmegaSSTLM.H /tmp/ref.H
-```
-
-Key elements of `gammaSST.H`:
-
-```cpp
-template<class BasicMomentumTransportModel>
-class gammaSST
-:
-    public kOmegaSST<
-        eddyViscosity<RASModel<BasicMomentumTransportModel>>,
-        BasicMomentumTransportModel
-    >
-{
-    // ... coefficients as dimensionedScalar
-    volScalarField gammaInt_;
-    volScalarField::Internal PkLim_;
-
-    tmp<volScalarField::Internal> TuL() const;
-    tmp<volScalarField::Internal> FPG() const;
-    tmp<volScalarField::Internal> ReThetac() const;
-    tmp<volScalarField::Internal> Fonset(...) const;
-
-    virtual tmp<volScalarField::Internal> Pk(...) const;
-    virtual tmp<volScalarField::Internal> epsilonByk(...) const;
-    virtual tmp<volScalarField> F1(...) const;
-
-public:
-    TypeName("gammaSST");     // <-- the string used in momentumTransport
-    virtual bool read();
-    virtual void correct();
-};
-```
-
-`TypeName("gammaSST")` is what makes `model gammaSST;` resolvable.
-
-Two OF13 idioms worth internalising:
-
-- **`volScalarField::Internal`** — a cell-centre-only field, no boundary values.
-  Source terms use it; it is cheaper and it is what the `Pk`/`epsilonByk` hook
-  signatures require. Get it from a full field with `.v()` or `()`.
-- **`tmp<...>`** — reference-counted temporary, avoids copying whole fields.
-
-### 10.5 Stage 4 — the implementation
-
-`gammaSST.C` in dependency order: helpers (`TuL`, `FPG`, `ReThetac`, `Fonset`),
-then hooks (`Pk`, `epsilonByk`, `F1`), then `read()`, then `correct()`.
-
-`correct()` follows the standard OpenFOAM pattern:
-
-```cpp
-template<class BasicMomentumTransportModel>
-void gammaSST<BasicMomentumTransportModel>::correct()
-{
-    if (!this->turbulence_) return;
-
-    // 1. compute gamma source terms, solve the gamma equation
-    //    (must happen BEFORE the base class solves k, since Pk() uses gamma)
-    // ...
-    solve(gammaEqn);
-    bound(gammaInt_, scalar(0));
-
-    // 2. let the SST base solve k and omega -- it calls our Pk()/epsilonByk()
-    kOmegaSST<...>::correct();
-}
-```
-
-**Numerical safety** — three things must be guarded, or you get FPEs:
-
-- Division by `omega` or `y` → add a small floor, or use `max(x, dimensionedScalar(dims, SMALL))`.
-- `exp()` of a large positive number → clip the argument.
-- `pow()` of a negative base → clamp with `max(..., 0)`.
-
-Every division in this implementation is floored. This matters especially on
-cold starts where `k` and `omega` may be uniform and `nut` is zero.
-
-**Dimensions are checked at run time.** If you build a source term whose
-dimensions don't match the equation, OpenFOAM aborts with a clear message. Use
-that — it catches most algebra mistakes for free.
-
-### 10.6 Stage 5 — registration for both regimes
-
-This is the step that gives automatic compressible/incompressible selection, and
-it is pure boilerplate.
-
-`gammaSSTIncompressibleMomentumTransportModels.C`:
-
-```cpp
-#include "IncompressibleMomentumTransportModel.H"
-#include "incompressibleMomentumTransportModel.H"
-#include "makeIncompressibleMomentumTransportModel.H"
-#include "gammaSST.H"
-#include "gammaSST.C"          // template: needs the definition here
-
-makeRASModel(gammaSST);
-```
-
-`gammaSSTCompressibleMomentumTransportModels.C` is the same with
-`Compressible`/`compressible`.
-
-**Why this yields automatic selection:** `gammaSST` is a *template* on
-`BasicMomentumTransportModel`. In the incompressible instantiation, `alpha` and
-`rho` are `geometricOneField` — a compile-time constant `1` — so every
-`alpha()*rho()*P` collapses to `P` with zero runtime cost. In the compressible
-instantiation they are real fields. Same source, two instantiations, registered
-into two separate runtime-selection tables. The **solver** then constructs from
-whichever table matches its regime. This is exactly how the built-in
-`kOmegaSSTLM` supports both:
-
-```bash
-grep -n kOmegaSSTLM $FOAM_SRC/MomentumTransportModels/*/[ic]*MomentumTransportModels.C
-```
-
-### 10.7 Stage 6 — build and validate
-
-```bash
-./Allwmake
-```
-
-Confirm **both** regimes registered:
-
-```bash
-nm -DC $FOAM_USER_LIBBIN/libgammaSST.so | grep -c gammaSST
-nm -DC $FOAM_USER_LIBBIN/libgammaSST.so | grep -o "incompressibleMomentumTransportModel" | sort -u
-nm -DC $FOAM_USER_LIBBIN/libgammaSST.so | grep -o "compressibleMomentumTransportModel"   | sort -u
-```
-
-Then validate against a case with known experimental data — never trust a
-turbulence model that has only been shown to compile. T3A is the right first
-test for a transition model because transition location is the whole point.
-
-### 10.8 Porting this to another OpenFOAM version
-
-| If you target | Change |
-|---|---|
-| Foundation ≤ v9 | framework is `TurbulenceModels`, not `MomentumTransportModels`; `turbulenceProperties` not `momentumTransport`; `makeTurbulenceModel` macros |
-| ESI `vXXXX` | as above, plus `nutkWallFunction` / dictionary differences, and `BasicTurbulenceModel` template parameter naming |
-| Adding a DES/LES variant | inherit from the DES base instead and override the same hooks |
-
----
+1. **Inherit, don't copy.** `gammaSST` is k-ω SST plus one equation and three
+   modified terms, and OpenFOAM 13 exposes exactly those terms as `virtual`
+   hooks (`Pk`, `epsilonByk`, `F1`). Overriding them gives ~480 lines instead of
+   ~1500, and upstream SST fixes propagate for free.
+2. **`LIB = $(FOAM_USER_LIBBIN)/libgammaSST`** in `Make/files` is what keeps the
+   build out of the OpenFOAM installation.
+3. **Solve γ before the base solves k**, since `Pk()` reads it.
+4. **Two registration units, one template** — that is the whole mechanism behind
+   automatic compressible/incompressible selection.
+5. **Validate against data, not against "it converged."** The first working
+   build of this model converged cleanly to a completely unphysical state
+   (γ ≈ 6300). The guide documents that bug and the two checks that catch it.
 
 ## 11. Troubleshooting
 
