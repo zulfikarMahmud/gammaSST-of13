@@ -1,0 +1,48 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  13
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      momentumTransport;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+simulationType RAS;
+
+RAS
+{
+    model           gammaSST;
+
+    turbulence      on;
+
+    // All Menter et al. (2015) constants are optional and default to the
+    // published values.  Uncomment to override, e.g.:
+    // gammaSSTCoeffs
+    // {
+    //     Flength     100;
+    //     ca2         0.06;
+    //     ce2         50;
+    //     sigmaGamma  1;
+    //     CTU1        100;
+    //     CTU2        1000;
+    //     CTU3        1;
+    //     CPG1        14.68;
+    //     CPG1lim     1.5;
+    //     CPG2        -7.34;
+    //     CPG3        0;
+    //     CPG2lim     3;
+    //     ReThetacLim 1100;
+    //     Ck          1;
+    //     CSEP        1;
+    // }
+}
+
+
+// ************************************************************************* //

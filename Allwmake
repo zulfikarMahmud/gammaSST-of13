@@ -1,0 +1,7 @@
+#!/bin/sh
+# Build the gammaSST library (out-of-tree, into $FOAM_USER_LIBBIN).
+# Usage:  ./Allwmake            (normal build)
+#         ./Allwmake -j         (parallel build)
+cd "${0%/*}" || exit 1                      # run from this script's directory
+
+wmake libso gammaSST                        # 'libso' => shared library (.so)

@@ -1,0 +1,34 @@
+# ---- OpenFOAM build artefacts ----------------------------------------------
+# wmake writes object files / dependency files into Make/<WM_OPTIONS>/
+# (leading **/ so the pattern matches at any depth, not just the repo root)
+**/Make/linux*
+**/Make/darwin*
+**/Make/win*
+**/lnInclude/
+*.o
+*.so
+*.dep
+
+# ---- Case run artefacts ------------------------------------------------------
+# Time directories written by the solver (0/ is kept: it holds the initial
+# conditions).  The patterns below deliberately do NOT match "0/".
+[1-9]*/
+0.[0-9]*/
+processor*/
+postProcessing/
+log.*
+*.eps
+*.OpenFOAM
+*.foam
+
+# blockMesh output
+**/constant/polyMesh/
+
+# Fields written INTO 0/ by function objects at time 0 (not initial conditions)
+**/0/uniform/
+**/0/wallShearStress
+
+# ---- Editor / OS -------------------------------------------------------------
+*~
+.*.swp
+.DS_Store

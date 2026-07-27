@@ -1,0 +1,4 @@
+gammaSSTIncompressibleMomentumTransportModels.C
+gammaSSTCompressibleMomentumTransportModels.C
+
+LIB = $(FOAM_USER_LIBBIN)/libgammaSST

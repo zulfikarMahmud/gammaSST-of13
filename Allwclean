@@ -1,0 +1,5 @@
+#!/bin/sh
+# Remove build artefacts for the gammaSST library.
+cd "${0%/*}" || exit 1
+
+wclean libso gammaSST
