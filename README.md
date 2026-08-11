@@ -144,7 +144,7 @@ F_1 \rightarrow \max(F_1^{SST},F_3),\quad F_3=e^{-(R_y/120)^8}$$
 ## 5. Install
 
 ```bash
-git clone https://github.com/<you>/gammaSST-of13.git
+git clone https://github.com/zulfikarMahmud/gammaSST-of13.git
 cd gammaSST-of13
 ```
 
@@ -528,3 +528,5 @@ GPL-3.0, matching OpenFOAM. See [LICENSE](LICENSE).
 This offering is not approved or endorsed by the OpenFOAM Foundation, the
 producer of the OpenFOAM software and owner of the OPENFOAM® and OpenCFD®
 trademarks.
+
+This implementation was done through ClaudeCode and closely monitoring the implementation. Please contact at zulfikarmahmudjoy@gmail.com for any query. 
