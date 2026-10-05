@@ -154,6 +154,7 @@ Source your OpenFOAM 13 environment, then build:
 
 ```bash
 source /opt/openfoam13/etc/bashrc
+chmod +x ./Allwmake
 ./Allwmake
 ```
 
@@ -166,6 +167,7 @@ ls -la $FOAM_USER_LIBBIN/libgammaSST.so
 To clean:
 
 ```bash
+chmod +x ./Allwclean
 ./Allwclean
 ```
 
