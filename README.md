@@ -144,6 +144,8 @@ F_1 \rightarrow \max(F_1^{SST},F_3),\quad F_3=e^{-(R_y/120)^8}$$
 ## 5. Install
 
 ```bash
+cd $FOAM_RUN
+cd ..
 git clone https://github.com/zulfikarMahmud/gammaSST-of13.git
 cd gammaSST-of13
 ```
